@@ -1,0 +1,17 @@
+flowchart LR
+    U[Web / Mobile Client]:::client --> GW[API Gateway<br/>routing, auth, rate limit]:::design
+    GW --> US[User Service]:::design
+    GW --> INV[Train Inventory Service<br/>FastAPI]:::impl
+    GW --> BK[Booking Service<br/>FastAPI]:::impl
+    BK -- "REST: hold / confirm / release seats" --> INV
+    BK -- "REST: charge / refund" --> PAY[Payment Service]:::design
+    BK -. "event: BookingConfirmed / Cancelled" .-> MQ[(Message Broker<br/>RabbitMQ)]:::design
+    MQ -.-> NS[Notification Service<br/>SMS / Email]:::design
+    INV -. "cache search results" .-> RC[(Redis)]:::design
+    US --- UDB[(User DB)]:::design
+    INV --- IDB[(PostgreSQL<br/>inventory_db)]:::impl
+    BK --- BDB[(PostgreSQL<br/>booking_db)]:::impl
+    PAY --- PDB[(Payment DB)]:::design
+    classDef impl fill:#d4f4dd,stroke:#1e7b34,stroke-width:2px,color:#000
+    classDef design fill:#eef1f5,stroke:#7a8699,stroke-dasharray: 4 3,color:#000
+    classDef client fill:#fff4d6,stroke:#b8860b,color:#000

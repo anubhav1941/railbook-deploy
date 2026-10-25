@@ -1,0 +1,502 @@
+{
+  "info": {
+    "name": "RailBook Microservices - 2025MT03101",
+    "description": "Calls for inventory-service and booking-service. Run in order (Collection Runner works). journey_date is set automatically to today + 5 days.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('journey_date')) {",
+          "  const d = new Date(); d.setDate(d.getDate() + 5);",
+          "  pm.collectionVariables.set('journey_date', d.toISOString().slice(0, 10));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "inventory_url",
+      "value": "http://localhost:8001"
+    },
+    {
+      "key": "booking_url",
+      "value": "http://localhost:8002"
+    },
+    {
+      "key": "journey_date",
+      "value": ""
+    },
+    {
+      "key": "pnr",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Inventory Service",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{inventory_url}}/health",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness (DB check)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{inventory_url}}/ready",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List trains",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{inventory_url}}/trains",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search trains NDLS to MMCT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{inventory_url}}/trains/search?source=NDLS&destination=MMCT&journey_date={{journey_date}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seat availability 12952 / 3A",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{inventory_url}}/availability?train_no=12952&journey_date={{journey_date}}&travel_class=3A",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add train (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{inventory_url}}/trains",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"train_no\": \"22436\",\n  \"name\": \"Vande Bharat Express\",\n  \"source\": \"NDLS\",\n  \"destination\": \"BSB\",\n  \"departure_time\": \"06:00\",\n  \"arrival_time\": \"14:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Created or already exists\", () => pm.expect(pm.response.code).to.be.oneOf([201, 409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add schedule for new train (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{inventory_url}}/trains/22436/schedules",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"journey_date\": \"{{journey_date}}\",\n  \"travel_class\": \"CC\",\n  \"total_seats\": 50,\n  \"fare\": 1750\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Created or already exists\", () => pm.expect(pm.response.code).to.be.oneOf([201, 409]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Booking Service",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{booking_url}}/health",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness (DB + inventory check)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{booking_url}}/ready",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create booking - 2 passengers 3A (CONFIRMED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{booking_url}}/bookings",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"user-101\",\n  \"train_no\": \"12952\",\n  \"journey_date\": \"{{journey_date}}\",\n  \"travel_class\": \"3A\",\n  \"passengers\": [\n    {\n      \"name\": \"Anubhav Arora\",\n      \"age\": 25,\n      \"gender\": \"M\"\n    },\n    {\n      \"name\": \"Rahul Sharma\",\n      \"age\": 28,\n      \"gender\": \"M\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Booking confirmed\", () => pm.expect(b.status).to.eql(\"CONFIRMED\"));",
+                  "pm.collectionVariables.set(\"pnr\", b.pnr);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get PNR status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{booking_url}}/bookings/{{pnr}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Availability after booking (seats reduced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{inventory_url}}/availability?train_no=12952&journey_date={{journey_date}}&travel_class=3A",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List bookings of user-101",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{booking_url}}/bookings?user_id=user-101",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create booking - payment fails (seats released)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{booking_url}}/bookings",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"user-101\",\n  \"train_no\": \"12952\",\n  \"journey_date\": \"{{journey_date}}\",\n  \"travel_class\": \"3A\",\n  \"passengers\": [\n    {\n      \"name\": \"Anubhav Arora\",\n      \"age\": 25,\n      \"gender\": \"M\"\n    },\n    {\n      \"name\": \"Rahul Sharma\",\n      \"age\": 28,\n      \"gender\": \"M\"\n    }\n  ],\n  \"simulate_payment_failure\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 402\", () => pm.response.to.have.status(402));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));",
+                  "pm.test(\"Booking FAILED\", () => pm.expect(pm.response.json().status).to.eql(\"FAILED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create booking - 5 passengers in 1A (sold out, 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{booking_url}}/bookings",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"user-102\",\n  \"train_no\": \"12952\",\n  \"journey_date\": \"{{journey_date}}\",\n  \"travel_class\": \"1A\",\n  \"passengers\": [\n    {\n      \"name\": \"Passenger 1\",\n      \"age\": 30,\n      \"gender\": \"F\"\n    },\n    {\n      \"name\": \"Passenger 2\",\n      \"age\": 30,\n      \"gender\": \"F\"\n    },\n    {\n      \"name\": \"Passenger 3\",\n      \"age\": 30,\n      \"gender\": \"F\"\n    },\n    {\n      \"name\": \"Passenger 4\",\n      \"age\": 30,\n      \"gender\": \"F\"\n    },\n    {\n      \"name\": \"Passenger 5\",\n      \"age\": 30,\n      \"gender\": \"F\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel booking (refund + seats released)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{booking_url}}/bookings/{{pnr}}/cancel",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));",
+                  "pm.test(\"Cancelled\", () => pm.expect(pm.response.json().status).to.eql(\"CANCELLED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Availability after cancel (seats back)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{inventory_url}}/availability?train_no=12952&journey_date={{journey_date}}&travel_class=3A",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get unknown PNR (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{booking_url}}/bookings/1111111111",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));",
+                  "console.log(\"Served by pod:\", pm.response.headers.get(\"X-Served-By\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

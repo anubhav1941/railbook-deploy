@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    participant C as Client (Postman)
+    participant B as Booking Service
+    participant BDB as booking_db
+    participant I as Inventory Service
+    participant IDB as inventory_db
+    participant P as Payment (mock)
+    C->>B: POST /bookings
+    B->>BDB: INSERT booking (PENDING)
+    B->>I: POST /inventory/holds (booking_ref = PNR)
+    I->>IDB: SELECT ... FOR UPDATE, check & decrement seats
+    alt seats not available
+        I-->>B: 409 Conflict
+        B->>BDB: status = FAILED
+        B-->>C: 409 FAILED
+    else seats held
+        I-->>B: 201 hold_id, total_fare
+        B->>P: charge(total_fare)
+        alt payment fails
+            P-->>B: declined
+            B->>I: POST /inventory/holds/{id}/release (compensation)
+            B->>BDB: status = FAILED
+            B-->>C: 402 FAILED, seats released
+        else payment ok
+            P-->>B: payment_ref
+            B->>I: POST /inventory/holds/{id}/confirm
+            B->>BDB: status = CONFIRMED
+            B-->>C: 201 CONFIRMED + PNR
+        end
+    end

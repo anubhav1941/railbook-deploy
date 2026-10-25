@@ -1,0 +1,31 @@
+flowchart LR
+    subgraph host[Windows laptop]
+        PM[Postman / Browser]
+        subgraph mk[minikube cluster - namespace: railbook]
+            subgraph inv[inventory-service]
+                ISVC[Service NodePort :30081<br/>ClusterIP: inventory-service:80]
+                IP1[Pod 1]
+                IP2[Pod 2]
+                IHPA[HPA 2-5 pods, CPU 50%]
+            end
+            subgraph bk[booking-service]
+                BSVC[Service NodePort :30082<br/>ClusterIP: booking-service:80]
+                BP1[Pod 1]
+                BP2[Pod 2]
+                BHPA[HPA 2-5 pods, CPU 50%]
+            end
+            IDB[(StatefulSet inventory-db<br/>Postgres + 1Gi PVC)]
+            BDB[(StatefulSet booking-db<br/>Postgres + 1Gi PVC)]
+            CM[ConfigMaps + Secrets]
+            DASH[Kubernetes Dashboard<br/>metrics-server]
+        end
+    end
+    PM -- "port-forward 8001" --> ISVC
+    PM -- "port-forward 8002" --> BSVC
+    ISVC --> IP1 & IP2
+    BSVC --> BP1 & BP2
+    BP1 & BP2 -- "http://inventory-service" --> ISVC
+    IP1 & IP2 --> IDB
+    BP1 & BP2 --> BDB
+    IHPA -. scales .-> IP1
+    BHPA -. scales .-> BP1
