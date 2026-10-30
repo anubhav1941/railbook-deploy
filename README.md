@@ -1,12 +1,48 @@
-# RailBook - Deployment
+<div align="center">
 
-Deployment repo for **RailBook**, a microservices based train ticket reservation system
-(BITS WILP, SEZG583 Scalable Services, Anubhav Arora, 2025MT03101).
+# 🚆 RailBook — Deployment
 
-Service repos:
-- `inventory-service`: trains, schedules, seat inventory
-- `booking-service`: bookings / PNR, booking saga
+**Microservices train-ticket reservation system on Kubernetes: two FastAPI services, a booking saga, StatefulSet databases and HPA autoscaling.**
 
+![Kubernetes](https://img.shields.io/badge/Kubernetes-minikube-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.12-009688?style=flat-square&logo=fastapi&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white)
+
+</div>
+
+| Repo | What it owns |
+|---|---|
+| [**inventory-service**](https://github.com/anubhav1941/inventory-service) | Trains, schedules, seat inventory, seat holds |
+| [**booking-service**](https://github.com/anubhav1941/booking-service) | Bookings / PNR, booking saga orchestration |
+| **railbook-deploy** (this repo) | Docker Compose, Kubernetes manifests, scripts, Postman tests, diagrams |
+
+> Academic project: BITS WILP, SEZG583 Scalable Services (Anubhav Arora, 2025MT03101).
+
+## ✨ Highlights
+- **Database per service:** each service owns its PostgreSQL, deployed as a StatefulSet with a 1Gi PVC.
+- **Booking saga:** hold seats → take payment → confirm, or compensate by releasing seats on failure.
+- **No overbooking:** seat holds lock the schedule row (`SELECT ... FOR UPDATE`), so concurrent requests on any replica can't sell the same seat twice.
+- **Resilient service calls:** timeouts and retries with exponential backoff, made safe by idempotency keys.
+- **Production-style Kubernetes:** liveness/readiness probes, resource limits, ConfigMaps/Secrets, and an HPA that scales inventory from 2 → 5 pods under load.
+- **CI/CD:** each service is tested and its image built by GitHub Actions, then pushed to Docker Hub.
+
+## 🏗️ Architecture
+Green = implemented in these repos. Dashed = in the design, not implemented.
+
+![Architecture](docs/diagrams/architecture.png)
+
+<details>
+<summary><b>Booking saga</b> and <b>Kubernetes deployment</b> diagrams</summary>
+
+![Booking saga](docs/diagrams/booking-saga.png)
+
+![Kubernetes deployment](docs/diagrams/k8s-deployment.png)
+
+</details>
+
+## 🚀 Getting started
 Clone all three repos into the same parent folder:
 ```
 railbook/
